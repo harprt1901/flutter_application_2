@@ -20,24 +20,35 @@ class Book(BaseModel):
     isbn: str
     title: str
     author: str
+    coverType: str
 
-# Initialize the list of books with some sample data
-books = [
-    Book(isbn="1234567890", title="Sample Book 1", author="Author 1"),
-    Book(isbn="2345678901", title="Sample Book 2", author="Author 2"),
-    # Add more books as needed
-]
+# Store books in a dictionary using ISBN as the key
+books_db = {}
 
-@app.get("/books", response_model=List[Book])
-def list_books():
-    return {"books": books}
+@app.get("/books")
+def get_books():
+    # Return the list of books
+    return {"books": list(books_db.values())}
 
 @app.post("/books")
 def add_book(book: Book):
-    new_book = {
-        "isbn": book.isbn,
-        "title": book.title,
-        "author": book.author
-    }
-    books.append(new_book)
-    return new_book
+    # Check if the ISBN already exists
+    if book.isbn in books_db:
+        raise HTTPException(status_code=400, detail="Book with this ISBN already exists")
+    
+    # Add the new book to the database
+    books_db[book.isbn] = book.dict()
+    return {"status": "Book added successfully"}
+
+@app.put("/books/{isbn}")
+def update_book(isbn: str, book_update: Book):
+    # Check if the ISBN exists
+    if isbn not in books_db:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Update the book in the database
+    book = books_db[isbn]
+    book.update(**book_update.dict())
+    return {"status": "Book updated successfully"}
+
+
